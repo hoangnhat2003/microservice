@@ -1,0 +1,49 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: API-GATEWAY
+  config:
+    import: "optional:configserver:"
+  cloud:
+    config:
+      enabled: true
+      uri: http://localhost:9296
+    gateway:
+      routes:
+        - id: DEPARTMENT-SERVICE
+          uri: lb://DEPARTMENT-SERVICE
+          predicates:
+            - Path=/departments/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: DEPARTMENT-SERVICE
+                fallbackuri: forward:/departmentServiceFallBack
+        - id: CORE-SERVICE
+          uri: lb://CORE-SERVICE
+          predicates:
+            - Path=/users/**
+            - Path=/tasks/**
+            - Path=/projects/**
+            - Path=/sections/**
+            - Path=/teams/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: CORE-SERVICE
+                fallbackuri: forward:/coreServiceFallBack
+hystrix:
+  command:
+    fallbackcmd:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 4000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: hystrix.stream
